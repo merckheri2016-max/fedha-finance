@@ -113,7 +113,7 @@
       // Budget
       budgetPlanning:{en:'Budget Planning',sw:'Mipango ya Bajeti',fr:'Planification du Budget'},
       spent:{en:'Spent',sw:'Imetumika',fr:'Dépensé'},
-      overBudget:{en:'Over budget by',sw:'Imezidi bajeti kwa',fr:'Dépassement du budget de'},
+      over{L('budget')}:{en:'Over budget by',sw:'Imezidi bajeti kwa',fr:'Dépassement du budget de'},
       noBudgetSet:{en:'No budget set',sw:'Hakuna bajeti iliyowekwa',fr:'Aucun budget défini'},
       overallUsage:{en:'Overall Budget Usage',sw:'Matumizi ya Bajeti Kwa Ujumla',fr:'Utilisation Globale du Budget'},
       // Savings
@@ -249,7 +249,7 @@
         const {error} = await supabase.from(table).delete().eq('id',id);
         if(error) throw error;
       },
-      upsertBudget: async (userId, month, category, amount) => {
+      upsert{L('budget')}: async (userId, month, category, amount) => {
         const {data,error} = await supabase.from('budgets').upsert(
           {user_id:userId,month,category,amount},
           {onConflict:'user_id,month,category'}
@@ -257,7 +257,7 @@
         if(error) throw error;
         return data;
       },
-      deleteBudget: async (userId, month, category) => {
+      delete{L('budget')}: async (userId, month, category) => {
         const {error} = await supabase.from('budgets').delete().eq('user_id',userId).eq('month',month).eq('category',category);
         if(error) throw error;
       },
@@ -406,7 +406,7 @@
     };
 
     // ─── DASHBOARD ──────────────────────────────────────────────
-    const DashboardPage=({data,profile,cur})=>{
+    const DashboardPage=({data,profile,cur,L})=>{
       const cm=curMonth();
       const mI=data.incomes.filter(i=>i.date&&i.date.startsWith(cm));
       const mE=data.expenses.filter(e=>e.date&&e.date.startsWith(cm));
@@ -425,27 +425,27 @@
       for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const ds=d.toISOString().split("T")[0];last7.push(data.expenses.filter(e=>e.date===ds).reduce((s,e)=>s+Number(e.amount),0));last7L.push(days[d.getDay()]);}
 
       return(<div>
-        <div style={{marginBottom:28}}><h2 style={{margin:0,fontSize:22,color:C.text,fontWeight:700}}>Welcome back, {(profile.name||"").split(" ")[0]}</h2><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"})}</div></div>
+        <div style={{marginBottom:28}}><h2 style={{margin:0,fontSize:22,color:C.text,fontWeight:700}}>{L('welcomeBack')}, {(profile.name||"").split(" ")[0]}</h2><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"})}</div></div>
         <div style={{display:"flex",flexWrap:"wrap",gap:14,marginBottom:24}}>
-          <StatCard label="Monthly Income" value={cur+" "+fmt(tI)} icon="income" color={C.accent}/>
-          <StatCard label="Monthly Expenses" value={cur+" "+fmt(tE)} icon="expense" color={C.warn}/>
-          <StatCard label="Balance" value={cur+" "+fmt(bal)} icon="dashboard" color={bal>=0?C.blue:C.warn}/>
-          <StatCard label="Budget Set" value={cur+" "+fmt(tB)} sub={tB>0?Math.round((tE/tB)*100)+"% used":"Not set"} icon="budget" color={C.orange}/>
+          <StatCard label={L('monthlyIncome')} value={cur+" "+fmt(tI)} icon="income" color={C.accent}/>
+          <StatCard label={L('monthlyExpenses')} value={cur+" "+fmt(tE)} icon="expense" color={C.warn}/>
+          <StatCard label={L('balance')} value={cur+" "+fmt(bal)} icon="dashboard" color={bal>=0?C.blue:C.warn}/>
+          <StatCard label={L('budgetSet')} value={cur+" "+fmt(tB)} sub={tB>0?Math.round((tE/tB)*100)+"% "+L('used'):L('notSet')} icon="budget" color={C.orange}/>
         </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:14,marginBottom:24}}>
-          <StatCard label="Savings Progress" value={cur+" "+fmt(tS)} sub={tST>0?"of "+cur+" "+fmt(tST)+" target":"No goals set"} icon="savings" color={C.purple}/>
-          <StatCard label="Total Invested" value={cur+" "+fmt(tInv)} sub={data.investments.length+" investment(s)"} icon="invest" color={C.blue}/>
+          <StatCard label={L('savingsProgress')} value={cur+" "+fmt(tS)} sub={tST>0?L('ofTarget')+" "+cur+" "+fmt(tST):L('noGoalsSet')} icon="savings" color={C.purple}/>
+          <StatCard label={L('totalInvested')} value={cur+" "+fmt(tInv)} sub={data.investments.length+" "+L('investment')} icon="invest" color={C.blue}/>
         </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
-          <Card style={{flex:"1 1 300px"}}><div style={{fontSize:13,color:C.textMuted,fontWeight:600,marginBottom:14}}>Last 7 Days Spending</div><MiniBar data={last7} color={C.warn} height={70}/><div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>{last7L.map((d,i)=><span key={i} style={{fontSize:10,color:C.textDim}}>{d}</span>)}</div></Card>
-          <Card style={{flex:"1 1 300px"}}><div style={{fontSize:13,color:C.textMuted,fontWeight:600,marginBottom:14}}>Top Spending Categories</div>{topCats.length===0?<div style={{color:C.textDim,fontSize:13}}>No expenses this month</div>:topCats.map(([cat,amt])=>(<div key={cat} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span style={{color:C.text}}>{cat}</span><span style={{color:C.textMuted,fontFamily:"'Space Mono',monospace",fontSize:12}}>{cur} {fmt(amt)}</span></div><ProgressBar value={amt} max={tE} color={C.orange}/></div>))}</Card>
-          <Card style={{flex:"1 1 100%"}}><div style={{fontSize:13,color:C.textMuted,fontWeight:600,marginBottom:14}}>Recent Transactions</div>{recentTx.length===0?<div style={{color:C.textDim,fontSize:13}}>No transactions yet</div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr style={{color:C.textDim,textAlign:"left"}}><th style={{padding:"6px 10px",fontWeight:500}}>Date</th><th style={{padding:"6px 10px",fontWeight:500}}>Type</th><th style={{padding:"6px 10px",fontWeight:500}}>Details</th><th style={{padding:"6px 10px",fontWeight:500,textAlign:"right"}}>Amount</th></tr></thead><tbody>{recentTx.map(tx=>(<tr key={tx.id} style={{borderTop:"1px solid "+C.border}}><td style={{padding:"8px 10px",color:C.textMuted}}>{tx.date?fmtDate(tx.date):""}</td><td style={{padding:"8px 10px"}}><span style={{padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:tx.txType==="income"?C.accentDim:C.warnDim,color:tx.txType==="income"?C.accent:C.warn}}>{tx.txType==="income"?"Income":"Expense"}</span></td><td style={{padding:"8px 10px",color:C.text}}>{tx.source||tx.category}{tx.description?" — "+tx.description:""}</td><td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace",color:tx.txType==="income"?C.accent:C.warn}}>{tx.txType==="income"?"+":"-"}{cur} {fmt(tx.amount)}</td></tr>))}</tbody></table></div>}</Card>
+          <Card style={{flex:"1 1 300px"}}><div style={{fontSize:13,color:C.textMuted,fontWeight:600,marginBottom:14}}>{L('last7Days')}</div><MiniBar data={last7} color={C.warn} height={70}/><div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>{last7L.map((d,i)=><span key={i} style={{fontSize:10,color:C.textDim}}>{d}</span>)}</div></Card>
+          <Card style={{flex:"1 1 300px"}}><div style={{fontSize:13,color:C.textMuted,fontWeight:600,marginBottom:14}}>{L('topCategories')}</div>{topCats.length===0?<div style={{color:C.textDim,fontSize:13}}>{L('noExpenses')}</div>:topCats.map(([cat,amt])=>(<div key={cat} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span style={{color:C.text}}>{cat}</span><span style={{color:C.textMuted,fontFamily:"'Space Mono',monospace",fontSize:12}}>{cur} {fmt(amt)}</span></div><ProgressBar value={amt} max={tE} color={C.orange}/></div>))}</Card>
+          <Card style={{flex:"1 1 100%"}}><div style={{fontSize:13,color:C.textMuted,fontWeight:600,marginBottom:14}}>{L('recentTransactions')}</div>{recentTx.length===0?<div style={{color:C.textDim,fontSize:13}}>{L('noTransactions')}</div>:<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr style={{color:C.textDim,textAlign:"left"}}><th style={{padding:"6px 10px",fontWeight:500}}>{L('date')}</th><th style={{padding:"6px 10px",fontWeight:500}}>{L('type')}</th><th style={{padding:"6px 10px",fontWeight:500}}>{L('details')}</th><th style={{padding:"6px 10px",fontWeight:500,textAlign:"right"}}>{L('amount')}</th></tr></thead><tbody>{recentTx.map(tx=>(<tr key={tx.id} style={{borderTop:"1px solid "+C.border}}><td style={{padding:"8px 10px",color:C.textMuted}}>{tx.date?fmtDate(tx.date):""}</td><td style={{padding:"8px 10px"}}><span style={{padding:"2px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:tx.txType==="income"?C.accentDim:C.warnDim,color:tx.txType==="income"?C.accent:C.warn}}>{tx.txType==="income"?L('income'):L('expenses')}</span></td><td style={{padding:"8px 10px",color:C.text}}>{tx.source||tx.category}{tx.description?" — "+tx.description:""}</td><td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace",color:tx.txType==="income"?C.accent:C.warn}}>{tx.txType==="income"?"+":"-"}{cur} {fmt(tx.amount)}</td></tr>))}</tbody></table></div>}</Card>
         </div>
       </div>);
     };
 
     // ─── INCOME PAGE ────────────────────────────────────────────
-    const IncomePage=({data,userId,reload,cur})=>{
+    const IncomePage=({data,userId,reload,cur,L})=>{
       const [modal,setModal]=useState(false);
       const [form,setForm]=useState({date:todayStr(),source:"",amount:"",method:"",notes:""});
       const [saving,setSaving]=useState(false);
@@ -460,25 +460,25 @@
       const total=data.incomes.filter(i=>i.date&&i.date.startsWith(curMonth())).reduce((s,i)=>s+Number(i.amount),0);
       return(<div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:12}}>
-          <div><h2 style={{margin:0,fontSize:22,color:C.text}}>Income Tracking</h2><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>This month: <span style={{color:C.accent,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(total)}</span></div></div>
-          <Btn onClick={()=>setModal(true)}><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={16} color="#0B0E11"/> Add Income</span></Btn>
+          <div><h2 style={{margin:0,fontSize:22,color:C.text}}>{L('incomeTracking')}</h2><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>{L('thisMonth')}: <span style={{color:C.accent,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(total)}</span></div></div>
+          <Btn onClick={()=>setModal(true)}><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={16} color="#0B0E11"/> {L('addIncome')}</span></Btn>
         </div>
-        {sorted.length===0?<EmptyState icon="income" message="No income recorded yet" action="Add Income" onAction={()=>setModal(true)}/>:(
-          <Card style={{padding:0,overflow:"hidden"}}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr style={{color:C.textDim,textAlign:"left",background:C.cardAlt}}>{["Date","Source","Method","Notes","Amount",""].map(h=><th key={h} style={{padding:"10px 14px",fontWeight:500,textAlign:h==="Amount"?"right":"left"}}>{h}</th>)}</tr></thead><tbody>{sorted.map(i=><tr key={i.id} style={{borderTop:"1px solid "+C.border}}><td style={{padding:"10px 14px",color:C.textMuted}}>{i.date?fmtDate(i.date):""}</td><td style={{padding:"10px 14px",color:C.text,fontWeight:500}}>{i.source}</td><td style={{padding:"10px 14px",color:C.textMuted}}>{i.method}</td><td style={{padding:"10px 14px",color:C.textMuted,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis"}}>{i.notes}</td><td style={{padding:"10px 14px",textAlign:"right",fontFamily:"'Space Mono',monospace",color:C.accent,fontWeight:600}}>+{cur} {fmt(i.amount)}</td><td style={{padding:"10px 14px"}}><button onClick={()=>del(i.id)} style={{background:"none",border:"none",cursor:"pointer",opacity:0.5}}><Icon name="trash" size={16} color={C.warn}/></button></td></tr>)}</tbody></table></div></Card>
+        {sorted.length===0?<EmptyState icon="income" message={L('noIncomeYet')} action={L('addIncome')} onAction={()=>setModal(true)}/>:(
+          <Card style={{padding:0,overflow:"hidden"}}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr style={{color:C.textDim,textAlign:"left",background:C.cardAlt}}>{[L('date'),L('source'),L('method'),L('notes'),L('amount'),""].map(h=><th key={h} style={{padding:"10px 14px",fontWeight:500,textAlign:h===L('amount')?"right":"left"}}>{h}</th>)}</tr></thead><tbody>{sorted.map(i=><tr key={i.id} style={{borderTop:"1px solid "+C.border}}><td style={{padding:"10px 14px",color:C.textMuted}}>{i.date?fmtDate(i.date):""}</td><td style={{padding:"10px 14px",color:C.text,fontWeight:500}}>{i.source}</td><td style={{padding:"10px 14px",color:C.textMuted}}>{i.method}</td><td style={{padding:"10px 14px",color:C.textMuted,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis"}}>{i.notes}</td><td style={{padding:"10px 14px",textAlign:"right",fontFamily:"'Space Mono',monospace",color:C.accent,fontWeight:600}}>+{cur} {fmt(i.amount)}</td><td style={{padding:"10px 14px"}}><button onClick={()=>del(i.id)} style={{background:"none",border:"none",cursor:"pointer",opacity:0.5}}><Icon name="trash" size={16} color={C.warn}/></button></td></tr>)}</tbody></table></div></Card>
         )}
-        <Modal open={modal} onClose={()=>setModal(false)} title="Add Income">
-          <Input label="Date" type="date" value={form.date} onChange={v=>setForm({...form,date:v})}/>
-          <Input label="Income Source" value={form.source} onChange={v=>setForm({...form,source:v})} options={INCOME_SRC}/>
-          <Input label="Amount" type="number" value={form.amount} onChange={v=>setForm({...form,amount:v})} placeholder="0"/>
-          <Input label="Payment Method" value={form.method} onChange={v=>setForm({...form,method:v})} options={PAY_METHODS}/>
-          <Input label="Notes" value={form.notes} onChange={v=>setForm({...form,notes:v})} type="textarea" placeholder="Optional..."/>
-          <Btn onClick={add} disabled={saving} style={{width:"100%"}}>{saving?"Saving...":"Save Income"}</Btn>
+        <Modal open={modal} onClose={()=>setModal(false)} title={L('addIncome')}>
+          <Input label={L('date')} type="date" value={form.date} onChange={v=>setForm({...form,date:v})}/>
+          <Input label={L('incomeSource')} value={form.source} onChange={v=>setForm({...form,source:v})} options={INCOME_SRC}/>
+          <Input label={L('amount')} type="number" value={form.amount} onChange={v=>setForm({...form,amount:v})} placeholder="0"/>
+          <Input label={L('paymentMethod')} value={form.method} onChange={v=>setForm({...form,method:v})} options={PAY_METHODS}/>
+          <Input label={L('notes')} value={form.notes} onChange={v=>setForm({...form,notes:v})} type="textarea" placeholder={L('optional')}/>
+          <Btn onClick={add} disabled={saving} style={{width:"100%"}}>{saving?L('saving'):L('saveIncome')}</Btn>
         </Modal>
       </div>);
     };
 
     // ─── EXPENSE PAGE ───────────────────────────────────────────
-    const ExpensePage=({data,userId,reload,cur})=>{
+    const ExpensePage=({data,userId,reload,cur,L})=>{
       const [modal,setModal]=useState(false);
       const [form,setForm]=useState({date:todayStr(),category:"",description:"",amount:"",method:"",notes:""});
       const [saving,setSaving]=useState(false);
@@ -493,26 +493,26 @@
       const total=data.expenses.filter(e=>e.date&&e.date.startsWith(curMonth())).reduce((s,e)=>s+Number(e.amount),0);
       return(<div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:12}}>
-          <div><h2 style={{margin:0,fontSize:22,color:C.text}}>Expense Tracking</h2><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>This month: <span style={{color:C.warn,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(total)}</span></div></div>
-          <Btn onClick={()=>setModal(true)}><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={16} color="#0B0E11"/> Add Expense</span></Btn>
+          <div><h2 style={{margin:0,fontSize:22,color:C.text}}>{L('expenseTracking')}</h2><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>{L('thisMonth')}: <span style={{color:C.warn,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(total)}</span></div></div>
+          <Btn onClick={()=>setModal(true)}><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={16} color="#0B0E11"/> {L('addExpense')}</span></Btn>
         </div>
-        {sorted.length===0?<EmptyState icon="expense" message="No expenses recorded yet" action="Add Expense" onAction={()=>setModal(true)}/>:(
+        {sorted.length===0?<EmptyState icon="expense" message={L('noExpensesYet')} action={L('addExpense')} onAction={()=>setModal(true)}/>:(
           <Card style={{padding:0,overflow:"hidden"}}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr style={{color:C.textDim,textAlign:"left",background:C.cardAlt}}>{["Date","Category","Description","Method","Amount",""].map(h=><th key={h} style={{padding:"10px 14px",fontWeight:500,textAlign:h==="Amount"?"right":"left"}}>{h}</th>)}</tr></thead><tbody>{sorted.map(e=><tr key={e.id} style={{borderTop:"1px solid "+C.border}}><td style={{padding:"10px 14px",color:C.textMuted}}>{e.date?fmtDate(e.date):""}</td><td style={{padding:"10px 14px",color:C.text,fontWeight:500}}>{e.category}</td><td style={{padding:"10px 14px",color:C.textMuted}}>{e.description}</td><td style={{padding:"10px 14px",color:C.textMuted}}>{e.method}</td><td style={{padding:"10px 14px",textAlign:"right",fontFamily:"'Space Mono',monospace",color:C.warn,fontWeight:600}}>-{cur} {fmt(e.amount)}</td><td style={{padding:"10px 14px"}}><button onClick={()=>del(e.id)} style={{background:"none",border:"none",cursor:"pointer",opacity:0.5}}><Icon name="trash" size={16} color={C.warn}/></button></td></tr>)}</tbody></table></div></Card>
         )}
-        <Modal open={modal} onClose={()=>setModal(false)} title="Add Expense">
-          <Input label="Date" type="date" value={form.date} onChange={v=>setForm({...form,date:v})}/>
-          <Input label="Category" value={form.category} onChange={v=>setForm({...form,category:v})} options={EXPENSE_CATS}/>
-          <Input label="Description" value={form.description} onChange={v=>setForm({...form,description:v})} placeholder="What did you spend on?"/>
-          <Input label="Amount" type="number" value={form.amount} onChange={v=>setForm({...form,amount:v})} placeholder="0"/>
-          <Input label="Payment Method" value={form.method} onChange={v=>setForm({...form,method:v})} options={PAY_METHODS}/>
-          <Input label="Notes" value={form.notes} onChange={v=>setForm({...form,notes:v})} type="textarea" placeholder="Optional..."/>
-          <Btn onClick={add} disabled={saving} style={{width:"100%"}}>{saving?"Saving...":"Save Expense"}</Btn>
+        <Modal open={modal} onClose={()=>setModal(false)} title={L('addExpense')}>
+          <Input label={L('date')} type="date" value={form.date} onChange={v=>setForm({...form,date:v})}/>
+          <Input label={L('category')} value={form.category} onChange={v=>setForm({...form,category:v})} options={EXPENSE_CATS}/>
+          <Input label={L('description')} value={form.description} onChange={v=>setForm({...form,description:v})} placeholder={L('whatSpend')}/>
+          <Input label={L('amount')} type="number" value={form.amount} onChange={v=>setForm({...form,amount:v})} placeholder="0"/>
+          <Input label={L('paymentMethod')} value={form.method} onChange={v=>setForm({...form,method:v})} options={PAY_METHODS}/>
+          <Input label={L('notes')} value={form.notes} onChange={v=>setForm({...form,notes:v})} type="textarea" placeholder={L('optional')}/>
+          <Btn onClick={add} disabled={saving} style={{width:"100%"}}>{saving?L('saving'):L('saveExpense')}</Btn>
         </Modal>
       </div>);
     };
 
     // ─── BUDGET PAGE ────────────────────────────────────────────
-    const BudgetPage=({data,userId,reload,cur})=>{
+    const BudgetPage=({data,userId,reload,cur,L})=>{
       const cm=curMonth();
       const [month,setMonth]=useState(cm);
       const budgets=data.budgets.filter(b=>b.month===month);
@@ -532,16 +532,16 @@
       const totalSpent=monthExp.reduce((s,e)=>s+Number(e.amount),0);
       return(<div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:12}}>
-          <div><h2 style={{margin:0,fontSize:22,color:C.text}}>Budget Planning</h2><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Budget: <span style={{color:C.orange,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(totalBudget)}</span> | Spent: <span style={{color:C.warn,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(totalSpent)}</span></div></div>
+          <div><h2 style={{margin:0,fontSize:22,color:C.text}}>{('budgetplanning')}</h2><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>{L('budget')}: <span style={{color:C.orange,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(totalBudget)}</span> | Spent: <span style={{color:C.warn,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(totalSpent)}</span></div></div>
           <Input value={month} onChange={setMonth} type="month" style={{marginBottom:0,width:180}}/>
         </div>
-        {totalBudget>0&&<Card style={{marginBottom:20}}><div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:8}}><span style={{color:C.textMuted}}>Overall Budget Usage</span><span style={{color:totalSpent>totalBudget?C.warn:C.accent,fontFamily:"'Space Mono',monospace"}}>{Math.round((totalSpent/totalBudget)*100)}%</span></div><ProgressBar value={totalSpent} max={totalBudget} color={totalSpent>totalBudget?C.warn:C.accent} height={10}/></Card>}
+        {totalBudget>0&&<Card style={{marginBottom:20}}><div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:8}}><span style={{color:C.textMuted}}>{('overallusage')}</span><span style={{color:totalSpent>totalBudget?C.warn:C.accent,fontFamily:"'Space Mono',monospace"}}>{Math.round((totalSpent/totalBudget)*100)}%</span></div><ProgressBar value={totalSpent} max={totalBudget} color={totalSpent>totalBudget?C.warn:C.accent} height={10}/></Card>}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
           {EXPENSE_CATS.map(cat=>{
             const planned=budgetMap[cat]||0;const spent=catSpend[cat]||0;const pct=planned>0?Math.round((spent/planned)*100):0;const over=spent>planned&&planned>0;
             return(<Card key={cat}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><span style={{fontSize:14,fontWeight:600,color:C.text}}>{cat}</span>{editing===cat?<div style={{display:"flex",gap:6}}><input type="number" value={val} onChange={e=>setVal(e.target.value)} placeholder="Amount" style={{width:90,padding:"4px 8px",borderRadius:6,border:"1px solid "+C.border,background:C.bg,color:C.text,fontSize:13,fontFamily:"'Space Mono',monospace"}} autoFocus onKeyDown={e=>e.key==="Enter"&&setBudget(cat,val)}/><button onClick={()=>setBudget(cat,val)} style={{background:C.accentDim,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer"}}><Icon name="check" size={14} color={C.accent}/></button></div>:<button onClick={()=>{setEditing(cat);setVal(planned||"");}} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:C.accent}}>{planned>0?"Edit":"+ Set"}</button>}</div>
             {planned>0&&<Fragment><ProgressBar value={spent} max={planned} color={over?C.warn:C.accent}/><div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:12}}><span style={{color:over?C.warn:C.textMuted}}>Spent: {cur} {fmt(spent)}</span><span style={{color:C.textDim}}>of {cur} {fmt(planned)}</span></div>{over&&<div style={{fontSize:11,color:C.warn,marginTop:4,display:"flex",alignItems:"center",gap:4}}><Icon name="alert" size={12} color={C.warn}/> Over budget by {cur} {fmt(spent-planned)}</div>}</Fragment>}
-            {planned===0&&<div style={{fontSize:12,color:C.textDim}}>No budget set</div>}
+            {planned===0&&<div style={{fontSize:12,color:C.textDim}}>{('nobudgetset')}</div>}
             </Card>);
           })}
         </div>
@@ -549,7 +549,7 @@
     };
 
     // ─── SAVINGS PAGE ───────────────────────────────────────────
-    const SavingsPage=({data,userId,reload,cur})=>{
+    const SavingsPage=({data,userId,reload,cur,L})=>{
       const [modal,setModal]=useState(false);
       const [addModal,setAddModal]=useState(null);
       const [form,setForm]=useState({name:"",target:"",saved:"0",deadline:""});
@@ -572,10 +572,10 @@
       const tT=data.savings_goals.reduce((s,g)=>s+Number(g.target),0);
       return(<div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:12}}>
-          <div><h2 style={{margin:0,fontSize:22,color:C.text}}>Savings Goals</h2><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Saved: <span style={{color:C.purple,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(tS)}</span> of {cur} {fmt(tT)}</div></div>
-          <Btn onClick={()=>setModal(true)}><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={16} color="#0B0E11"/> New Goal</span></Btn>
+          <div><h2 style={{margin:0,fontSize:22,color:C.text}}>{('savingsgoals')}</h2><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Saved: <span style={{color:C.purple,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(tS)}</span> of {cur} {fmt(tT)}</div></div>
+          <Btn onClick={()=>setModal(true)}><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={16} color="#0B0E11"/> {L('newGoal')}</span></Btn>
         </div>
-        {data.savings_goals.length===0?<EmptyState icon="target" message="No savings goals yet" action="Create Goal" onAction={()=>setModal(true)}/>:(
+        {data.savings_goals.length===0?<EmptyState icon="target" message={L('noSavingsYet')} action={L('createGoal')} onAction={()=>setModal(true)}/>:(
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>
             {data.savings_goals.map(g=>{
               const pct=Number(g.target)>0?Math.round((Number(g.saved)/Number(g.target))*100):0;
@@ -583,12 +583,12 @@
               return(<Card key={g.id}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div><div style={{fontSize:16,fontWeight:700,color:C.text}}>{g.name}</div>{g.deadline&&<div style={{fontSize:12,color:C.textDim,marginTop:2}}>Due: {fmtDate(g.deadline)}</div>}</div><div style={{display:"flex",gap:6}}><button onClick={()=>{setAddModal(g.id);setAddAmt("");}} style={{background:C.accentDim,border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Icon name="plus" size={14} color={C.accent}/></button><button onClick={()=>del(g.id)} style={{background:C.warnDim,border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Icon name="trash" size={14} color={C.warn}/></button></div></div>
               <div style={{margin:"16px 0 8px"}}><div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}><span style={{color:C.purple,fontFamily:"'Space Mono',monospace",fontWeight:600}}>{pct}%</span><span style={{color:C.textMuted}}>{cur} {fmt(g.saved)} / {cur} {fmt(g.target)}</span></div><ProgressBar value={Number(g.saved)} max={Number(g.target)} color={C.purple} height={10}/></div>
               <div style={{fontSize:12,color:C.textDim}}>Remaining: {cur} {fmt(rem)}</div>
-              {pct>=100&&<div style={{fontSize:12,color:C.accent,marginTop:4,fontWeight:600}}>Goal reached!</div>}
+              {pct>=100&&<div style={{fontSize:12,color:C.accent,marginTop:4,fontWeight:600}}>{('goalreached')}</div>}
               </Card>);
             })}
           </div>
         )}
-        <Modal open={modal} onClose={()=>setModal(false)} title="New Savings Goal">
+        <Modal open={modal} onClose={()=>setModal(false)} title={L('savingsGoals')}>
           <Input label="Goal Name" value={form.name} onChange={v=>setForm({...form,name:v})} placeholder="e.g. Emergency Fund"/>
           <Input label="Target Amount" type="number" value={form.target} onChange={v=>setForm({...form,target:v})} placeholder="0"/>
           <Input label="Already Saved" type="number" value={form.saved} onChange={v=>setForm({...form,saved:v})} placeholder="0"/>
@@ -603,7 +603,7 @@
     };
 
     // ─── INVESTMENTS PAGE ───────────────────────────────────────
-    const InvestmentPage=({data,userId,reload,cur})=>{
+    const InvestmentPage=({data,userId,reload,cur,L})=>{
       const [modal,setModal]=useState(false);
       const [form,setForm]=useState({type:"",name:"",amount:"",date:todayStr(),expected_return:"",current_value:"",notes:""});
       const [saving,setSaving]=useState(false);
@@ -619,10 +619,10 @@
       const gain=tC-tI;
       return(<div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:12}}>
-          <div><h2 style={{margin:0,fontSize:22,color:C.text}}>Investments</h2><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Invested: <span style={{color:C.blue,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(tI)}</span>{gain!==0&&<span> | <span style={{color:gain>0?C.accent:C.warn}}>{gain>0?"+":""}{cur} {fmt(gain)}</span></span>}</div></div>
-          <Btn onClick={()=>setModal(true)}><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={16} color="#0B0E11"/> Add Investment</span></Btn>
+          <div><h2 style={{margin:0,fontSize:22,color:C.text}}>{('investments')}</h2><div style={{fontSize:13,color:C.textMuted,marginTop:4}}>Invested: <span style={{color:C.blue,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(tI)}</span>{gain!==0&&<span> | <span style={{color:gain>0?C.accent:C.warn}}>{gain>0?"+":""}{cur} {fmt(gain)}</span></span>}</div></div>
+          <Btn onClick={()=>setModal(true)}><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={16} color="#0B0E11"/> {L('addInvestment')}</span></Btn>
         </div>
-        {data.investments.length===0?<EmptyState icon="invest" message="No investments yet" action="Add Investment" onAction={()=>setModal(true)}/>:(
+        {data.investments.length===0?<EmptyState icon="invest" message={L('noInvestmentsYet')} action={L('addInvestment')} onAction={()=>setModal(true)}/>:(
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>
             {data.investments.map(inv=>{
               const g=Number(inv.current_value||inv.amount)-Number(inv.amount);
@@ -637,7 +637,7 @@
             })}
           </div>
         )}
-        <Modal open={modal} onClose={()=>setModal(false)} title="Add Investment">
+        <Modal open={modal} onClose={()=>setModal(false)} title={L('addInvestment')}>
           <Input label="Investment Type" value={form.type} onChange={v=>setForm({...form,type:v})} options={INV_TYPES}/>
           <Input label="Name / Description" value={form.name} onChange={v=>setForm({...form,name:v})} placeholder="e.g. Safaricom Shares"/>
           <Input label="Amount Invested" type="number" value={form.amount} onChange={v=>setForm({...form,amount:v})} placeholder="0"/>
@@ -651,7 +651,7 @@
     };
 
     // ─── REPORTS PAGE (Enhanced) ────────────────────────────────
-    const ReportsPage=({data,cur})=>{
+    const ReportsPage=({data,cur,L})=>{
       const cm=curMonth();
       const months12=[];
       for(let i=11;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);const m=d.toISOString().slice(0,7);
@@ -680,7 +680,7 @@
       };
 
       return(<div>
-        <h2 style={{margin:"0 0 24px",fontSize:22,color:C.text}}>Reports & Analysis</h2>
+        <h2 style={{margin:"0 0 24px",fontSize:22,color:C.text}}>{('reportsanalysis')}</h2>
         <Card style={{marginBottom:20}}>
           <div style={{fontSize:13,color:C.textMuted,fontWeight:600,marginBottom:16}}>Income vs Expenses (Last 6 Months)</div>
           <div style={{display:"flex",alignItems:"flex-end",gap:6,height:140}}>
@@ -689,8 +689,8 @@
           <div style={{display:"flex",gap:16,justifyContent:"center",marginTop:14}}><span style={{fontSize:12,color:C.accent,display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,background:C.accent,borderRadius:2,display:"inline-block"}}/> Income</span><span style={{fontSize:12,color:C.warn,display:"flex",alignItems:"center",gap:4}}><span style={{width:10,height:10,background:C.warn,borderRadius:2,display:"inline-block"}}/> Expenses</span></div>
         </Card>
         <div style={{display:"flex",flexWrap:"wrap",gap:14,marginBottom:20}}>
-          <Card style={{flex:"1 1 300px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}><div style={{fontSize:13,color:C.textMuted,fontWeight:600}}>Monthly Expense Trend (12 Months)</div><Icon name="trending" size={16} color={C.warn}/></div><TrendLine tdata={months12.map(m=>m.expense)} color={C.warn} maxV={expMax} lid="exp"/><div style={{display:"flex",justifyContent:"space-between",marginTop:10,fontSize:12}}><span style={{color:C.textMuted}}>Avg: <span style={{color:C.warn,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(months12.reduce((s,m)=>s+m.expense,0)/12)}</span></span><span style={{color:C.textMuted}}>This month: <span style={{color:C.warn,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(months12[11]?.expense||0)}</span></span></div></Card>
-          <Card style={{flex:"1 1 300px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}><div style={{fontSize:13,color:C.textMuted,fontWeight:600}}>Monthly Income Trend (12 Months)</div><Icon name="trending" size={16} color={C.accent}/></div><TrendLine tdata={months12.map(m=>m.income)} color={C.accent} maxV={incMax} lid="inc"/><div style={{display:"flex",justifyContent:"space-between",marginTop:10,fontSize:12}}><span style={{color:C.textMuted}}>Avg: <span style={{color:C.accent,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(months12.reduce((s,m)=>s+m.income,0)/12)}</span></span><span style={{color:C.textMuted}}>This month: <span style={{color:C.accent,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(months12[11]?.income||0)}</span></span></div></Card>
+          <Card style={{flex:"1 1 300px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}><div style={{fontSize:13,color:C.textMuted,fontWeight:600}}>Monthly Expense Trend (12 Months)</div><Icon name="trending" size={16} color={C.warn}/></div><TrendLine tdata={months12.map(m=>m.expense)} color={C.warn} maxV={expMax} lid="exp"/><div style={{display:"flex",justifyContent:"space-between",marginTop:10,fontSize:12}}><span style={{color:C.textMuted}}>Avg: <span style={{color:C.warn,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(months12.reduce((s,m)=>s+m.expense,0)/12)}</span></span><span style={{color:C.textMuted}}>{('thismonth')}: <span style={{color:C.warn,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(months12[11]?.expense||0)}</span></span></div></Card>
+          <Card style={{flex:"1 1 300px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}><div style={{fontSize:13,color:C.textMuted,fontWeight:600}}>Monthly Income Trend (12 Months)</div><Icon name="trending" size={16} color={C.accent}/></div><TrendLine tdata={months12.map(m=>m.income)} color={C.accent} maxV={incMax} lid="inc"/><div style={{display:"flex",justifyContent:"space-between",marginTop:10,fontSize:12}}><span style={{color:C.textMuted}}>Avg: <span style={{color:C.accent,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(months12.reduce((s,m)=>s+m.income,0)/12)}</span></span><span style={{color:C.textMuted}}>{('thismonth')}: <span style={{color:C.accent,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(months12[11]?.income||0)}</span></span></div></Card>
         </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
           <Card style={{flex:"1 1 300px"}}><div style={{fontSize:13,color:C.textMuted,fontWeight:600,marginBottom:16}}>Expense Breakdown</div>{catEntries.length===0?<div style={{color:C.textDim,fontSize:13}}>No data</div>:<Fragment><div style={{display:"flex",flexWrap:"wrap",gap:3,marginBottom:16}}>{catEntries.map(([cat,amt],i)=><div key={cat} style={{height:8,borderRadius:4,width:Math.max((amt/totalExp)*100,3)+"%",background:colors[i%colors.length]}}/>)}</div>{catEntries.map(([cat,amt],i)=><div key={cat} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid "+C.border}}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{width:10,height:10,borderRadius:3,background:colors[i%colors.length],display:"inline-block"}}/><span style={{fontSize:13,color:C.text}}>{cat}</span></div><div><span style={{fontSize:13,color:C.text,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(amt)}</span><span style={{fontSize:11,color:C.textDim,marginLeft:8}}>{Math.round((amt/totalExp)*100)}%</span></div></div>)}</Fragment>}</Card>
@@ -700,7 +700,7 @@
     };
 
     // ─── LOANS & DEBTS PAGE ─────────────────────────────────────
-    const LoansPage=({data,userId,reload,cur})=>{
+    const LoansPage=({data,userId,reload,cur,L})=>{
       const [modal,setModal]=useState(false);
       const [payModal,setPayModal]=useState(null);
       const [payAmt,setPayAmt]=useState("");
@@ -727,13 +727,13 @@
       const activeBorrowed=loans.filter(l=>l.type==="borrowed"&&l.status==="active").length;
       const activeLent=loans.filter(l=>l.type==="lent"&&l.status==="active").length;
       return(<div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:12}}><div><h2 style={{margin:0,fontSize:22,color:C.text}}>Loans & Debts</h2></div><Btn onClick={()=>setModal(true)}><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={16} color="#0B0E11"/> Add Loan</span></Btn></div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24,flexWrap:"wrap",gap:12}}><div><h2 style={{margin:0,fontSize:22,color:C.text}}>{('loans')}</h2></div><Btn onClick={()=>setModal(true)}><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={16} color="#0B0E11"/> {L('addLoan')}</span></Btn></div>
         <div style={{display:"flex",flexWrap:"wrap",gap:14,marginBottom:20}}>
           <Card style={{flex:"1 1 200px"}}><div style={{fontSize:12,color:C.textMuted,marginBottom:6,fontWeight:500}}>I Owe (Borrowed)</div><div style={{fontSize:22,fontWeight:700,color:C.warn,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(totalBorrowed-totalBorrowedPaid)}</div><div style={{fontSize:12,color:C.textDim,marginTop:4}}>{activeBorrowed} active</div>{totalBorrowed>0&&<div style={{marginTop:8}}><ProgressBar value={totalBorrowedPaid} max={totalBorrowed} color={C.accent} height={6}/><div style={{fontSize:11,color:C.textDim,marginTop:4}}>{cur} {fmt(totalBorrowedPaid)} of {cur} {fmt(totalBorrowed)} repaid</div></div>}</Card>
           <Card style={{flex:"1 1 200px"}}><div style={{fontSize:12,color:C.textMuted,marginBottom:6,fontWeight:500}}>Owed to Me (Lent)</div><div style={{fontSize:22,fontWeight:700,color:C.blue,fontFamily:"'Space Mono',monospace"}}>{cur} {fmt(totalLent-totalLentPaid)}</div><div style={{fontSize:12,color:C.textDim,marginTop:4}}>{activeLent} active</div>{totalLent>0&&<div style={{marginTop:8}}><ProgressBar value={totalLentPaid} max={totalLent} color={C.blue} height={6}/><div style={{fontSize:11,color:C.textDim,marginTop:4}}>{cur} {fmt(totalLentPaid)} of {cur} {fmt(totalLent)} recovered</div></div>}</Card>
         </div>
         <div style={{display:"flex",gap:8,marginBottom:20}}>{[["all","All"],["borrowed","I Borrowed"],["lent","I Lent"]].map(([val,lbl])=><button key={val} onClick={()=>setFilter(val)} style={{...btnBase,padding:"8px 16px",fontSize:13,background:filter===val?C.accentDim:"transparent",color:filter===val?C.accent:C.textMuted,border:"1px solid "+(filter===val?C.accent+"40":C.border),borderRadius:20}}>{lbl}</button>)}</div>
-        {sorted.length===0?<EmptyState icon="loans" message="No loans or debts recorded" action="Add Loan" onAction={()=>setModal(true)}/>:(
+        {sorted.length===0?<EmptyState icon="loans" message={L('noLoansYet')} action={L('addLoan')} onAction={()=>setModal(true)}/>:(
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:14}}>{sorted.map(loan=>{
             const remaining=Math.max(0,Number(loan.amount)-Number(loan.paid));const pct=Number(loan.amount)>0?Math.round((Number(loan.paid)/Number(loan.amount))*100):0;const isPaid=loan.status==="paid";const isOverdue=loan.due_date&&new Date(loan.due_date)<new Date()&&!isPaid;
             return(<Card key={loan.id} style={{opacity:isPaid?0.7:1}}>
@@ -763,7 +763,7 @@
     };
 
     // ─── PROFILE PAGE ───────────────────────────────────────────
-    const ProfilePage=({profile,userId,reload,onLogout})=>{
+    const ProfilePage=({profile,userId,reload,onLogout,L})=>{
       const [form,setForm]=useState({name:profile.name||"",email:profile.email||"",currency:profile.currency||"TZS"});
       const [saved,setSaved]=useState(false);
       const [saving,setSaving]=useState(false);
@@ -774,18 +774,18 @@
       };
       const handleLogout=async()=>{try{await db.signOut();onLogout();}catch(e){alert(e.message);}};
       return(<div>
-        <h2 style={{margin:"0 0 24px",fontSize:22,color:C.text}}>Profile & Settings</h2>
+        <h2 style={{margin:"0 0 24px",fontSize:22,color:C.text}}>{('profile')}</h2>
         <div style={{maxWidth:500}}>
           <Card style={{marginBottom:20}}>
-            <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:16}}>Personal Information</div>
+            <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:16}}>{('personalinfo')}</div>
             <Input label="Full Name" value={form.name} onChange={v=>setForm({...form,name:v})}/>
             <Input label="Email" value={form.email} onChange={v=>setForm({...form,email:v})} type="email"/>
             <Input label="Currency" value={form.currency} onChange={v=>setForm({...form,currency:v})} options={["TZS","KES","UGX","USD","EUR","GBP"]}/>
             <div style={{display:"flex",gap:10}}><Btn onClick={save} disabled={saving}>{saving?"Saving...":"Save Changes"}</Btn>{saved&&<span style={{color:C.accent,fontSize:13,alignSelf:"center"}}>Saved!</span>}</div>
           </Card>
           <Card>
-            <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:12}}>Account</div>
-            <Btn onClick={handleLogout} variant="danger"><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="logout" size={16} color={C.warn}/> Log Out</span></Btn>
+            <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:12}}>{('account')}</div>
+            <Btn onClick={handleLogout} variant="danger"><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="logout" size={16} color={C.warn}/>  {L('logOut')}</span></Btn>
           </Card>
         </div>
       </div>);
@@ -877,16 +877,16 @@
       const cur=profile.currency||"TZS";
       const renderPage=()=>{
         switch(page){
-          case "dashboard": return <DashboardPage data={data} profile={profile} cur={cur}/>;
-          case "income": return <IncomePage data={data} userId={user.id} reload={reload} cur={cur}/>;
-          case "expenses": return <ExpensePage data={data} userId={user.id} reload={reload} cur={cur}/>;
-          case "budget": return <BudgetPage data={data} userId={user.id} reload={reload} cur={cur}/>;
-          case "savings": return <SavingsPage data={data} userId={user.id} reload={reload} cur={cur}/>;
-          case "investments": return <InvestmentPage data={data} userId={user.id} reload={reload} cur={cur}/>;
-          case "loans": return <LoansPage data={data} userId={user.id} reload={reload} cur={cur}/>;
-          case "reports": return <ReportsPage data={data} cur={cur}/>;
-          case "profile": return <ProfilePage profile={profile} userId={user.id} reload={reload} onLogout={()=>{setUser(null);setProfile(null);}}/>;
-          default: return <DashboardPage data={data} profile={profile} cur={cur}/>;
+          case "dashboard": return <DashboardPage data={data} profile={profile} cur={cur} L={L}/>;
+          case "income": return <IncomePage data={data} userId={user.id} reload={reload} cur={cur} L={L}/>;
+          case "expenses": return <ExpensePage data={data} userId={user.id} reload={reload} cur={cur} L={L}/>;
+          case "budget": return <BudgetPage data={data} userId={user.id} reload={reload} cur={cur} L={L}/>;
+          case "savings": return <SavingsPage data={data} userId={user.id} reload={reload} cur={cur} L={L}/>;
+          case "investments": return <InvestmentPage data={data} userId={user.id} reload={reload} cur={cur} L={L}/>;
+          case "loans": return <LoansPage data={data} userId={user.id} reload={reload} cur={cur} L={L}/>;
+          case "reports": return <ReportsPage data={data} cur={cur} L={L}/>;
+          case "profile": return <ProfilePage profile={profile} userId={user.id} reload={reload} onLogout={()=>{setUser(null);setProfile(null);}} L={L}/>;
+          default: return <DashboardPage data={data} profile={profile} cur={cur} L={L}/>;
         }
       };
 
