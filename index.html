@@ -507,8 +507,10 @@
         )}
         <Modal open={modal} onClose={()=>setModal(false)} title={L('addExpense')}>
           <Input label={L('date')} type="date" value={form.date} onChange={v=>setForm({...form,date:v})}/>
-          <Input label={L('category')} value={form.category} onChange={v=>setForm({...form,category:v})} options={[...EXPENSE_CATS,"Custom"]}/>
-          {form.category==="Custom"&&<Input label="Type your category" value={form.customCat} onChange={v=>setForm({...form,customCat:v})} placeholder="e.g. Gym membership"/>}
+          <Input label={L('category')} value={form.category} onChange={v=>setForm({...form,category:v})} options={EXPENSE_CATS}/>
+          {(form.category==="Capital Saving"||form.category==="Investment Expenditure")&&<div style={{background:"rgba(0,212,170,0.08)",border:"1px solid rgba(0,212,170,0.2)",borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:12,color:C.accent,lineHeight:1.6}}>
+            {form.category==="Capital Saving"?"💡 Capital Saving = money you set aside from your income into savings. Record it here as an expense (money going out of your wallet), then track the goal in the Savings page.":"💡 Investment Expenditure = money you spend to invest (e.g. buying shares, property, bonds). Record it here as an expense, then track the investment details in the Investments page."}
+          </div>}
           <Input label={L('description')} value={form.description} onChange={v=>setForm({...form,description:v})} placeholder={L('whatSpend')}/>
           <Input label={L('amount')} type="number" value={form.amount} onChange={v=>setForm({...form,amount:v})} placeholder="0"/>
           <Input label={L('paymentMethod')} value={form.method} onChange={v=>setForm({...form,method:v})} options={PAY_METHODS}/>
@@ -650,7 +652,9 @@
           <Input label="Amount Invested" type="number" value={form.amount} onChange={v=>setForm({...form,amount:v})} placeholder="0"/>
           <Input label="Date" type="date" value={form.date} onChange={v=>setForm({...form,date:v})}/>
           <Input label={L('expectedReturn')} type="number" value={form.expected_return} onChange={v=>setForm({...form,expected_return:v})} placeholder="0"/>
+          <div style={{background:"rgba(91,159,255,0.08)",border:"1px solid rgba(91,159,255,0.2)",borderRadius:10,padding:"10px 14px",marginTop:-8,marginBottom:14,fontSize:12,color:C.blue,lineHeight:1.6}}>💡 Expected Return = the total profit you expect to earn from this investment. E.g. if you invested 100,000 and expect to get back 130,000, your expected return is 30,000.</div>
           <Input label={L('currentValue')} type="number" value={form.current_value} onChange={v=>setForm({...form,current_value:v})} placeholder="Same as invested"/>
+          <div style={{background:"rgba(91,159,255,0.08)",border:"1px solid rgba(91,159,255,0.2)",borderRadius:10,padding:"10px 14px",marginTop:-8,marginBottom:14,fontSize:12,color:C.blue,lineHeight:1.6}}>💡 Current Value = what your investment is worth today. If you invested 100,000 and it has grown to 120,000, the current value is 120,000. If you just started, leave it same as the amount invested.</div>
           <Input label="Notes" value={form.notes} onChange={v=>setForm({...form,notes:v})} type="textarea" placeholder="Optional..."/>
           <Btn onClick={add} disabled={saving} style={{width:"100%"}}>{saving?"Saving...":"Save Investment"}</Btn>
         </Modal>
