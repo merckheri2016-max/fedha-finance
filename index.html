@@ -136,8 +136,8 @@
       noInvestmentsYet:{en:'No investments yet',sw:'Hakuna uwekezaji bado',fr:"Aucun investissement"},
       investmentType:{en:'Investment Type',sw:'Aina ya Uwekezaji',fr:"Type d'Investissement"},
       amountInvested:{en:'Amount Invested',sw:'Kiasi cha Uwekezaji',fr:'Montant Investi'},
-      expectedReturn:{en:'Expected Return',sw:'Faida Inayotarajiwa',fr:'Rendement Attendu'},
-      currentValue:{en:'Current Value',sw:'Thamani ya Sasa',fr:'Valeur Actuelle'},
+      expectedReturn:{en:'Expected Return (profit you expect)',sw:'Faida Inayotarajiwa (faida unayotarajia)',fr:'Rendement Attendu (profit espéré)'},
+      currentValue:{en:'Current Value (what it is worth now)',sw:'Thamani ya Sasa (thamani yake sasa)',fr:'Valeur Actuelle (sa valeur maintenant)'},
       gainLoss:{en:'Gain/Loss',sw:'Faida/Hasara',fr:'Gain/Perte'},
       invested:{en:'Invested',sw:'Imewekwa',fr:'Investi'},
       saveInvestment:{en:'Save Investment',sw:'Hifadhi Uwekezaji',fr:"Enregistrer l'Investissement"},
@@ -282,8 +282,8 @@
       purple:"#B388FF",purpleDim:"rgba(179,136,255,0.12)",
       text:"#E8ECF4",textMuted:"#8892A8",textDim:"#5A6478",
     };
-    const EXPENSE_CATS=["Food","Transport","Rent","Bills","Savings","Investment","Business","Church","Entertainment","Emergencies","Health","Education","Other"];
-    const INCOME_SRC=["Salary","Business","Side Hustle","Gifts","Commissions","Freelance","Interest","Other"];
+    const EXPENSE_CATS=["Food","Transport","Rent","Bills","Utilities","Health","Education","Clothing","Church","Entertainment","Business Expense","Capital Saving","Investment Expenditure","Emergencies","Other"];
+    const INCOME_SRC=["Salary","Business","Side Hustle","Gifts","Commissions","Freelance","Interest","Dividends","Rental Income","Other"];
     const PAY_METHODS=["Cash","Bank Transfer","Mobile Money","Card","Cheque","Other"];
     const INV_TYPES=["Shares","Mutual Funds","Bonds","Fixed Deposits","Business Investment","Land/Property","Other"];
     const fmt=(n)=>(Number(n)||0).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0});
@@ -324,8 +324,11 @@
       return(<button onClick={onClick} disabled={disabled} style={{...btnBase,...v[variant],opacity:disabled?0.5:1,...style}}>{children}</button>);
     };
     const Input=({label,value,onChange,type="text",placeholder,options,style={}})=>{
+      const [custom,setCustom]=useState(false);
       const base={background:C.surface,border:"1px solid "+C.border,borderRadius:10,color:C.text,padding:"10px 14px",fontSize:14,width:"100%",fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box"};
-      return(<div style={{marginBottom:14,...style}}>{label&&<label style={{display:"block",fontSize:12,color:C.textMuted,marginBottom:6,fontWeight:500}}>{label}</label>}{options?<select value={value} onChange={e=>onChange(e.target.value)} style={{...base,appearance:"auto"}}><option value="">{placeholder||"Select..."}</option>{options.map(o=><option key={o} value={o}>{o}</option>)}</select>:type==="textarea"?<textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={3} style={{...base,resize:"vertical"}}/>:type==="date"?<input type="date" value={value} onChange={e=>onChange(e.target.value)} onClick={e=>{try{e.target.showPicker()}catch(x){}}} style={{...base,colorScheme:"dark",cursor:"pointer"}}/>:<input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={base}/>}</div>);
+      const dateStyle={...base,colorScheme:"dark",cursor:"pointer"};
+      const handleSelect=(v)=>{if(v==="__custom__"){setCustom(true);onChange("");}else{setCustom(false);onChange(v);}};
+      return(<div style={{marginBottom:14,...style}}>{label&&<label style={{display:"block",fontSize:12,color:C.textMuted,marginBottom:6,fontWeight:500}}>{label}</label>}{options&&!custom?<div><select value={value} onChange={e=>handleSelect(e.target.value)} style={{...base,appearance:"auto"}}><option value="">{placeholder||"Select..."}</option>{options.map(o=><option key={o} value={o}>{o}</option>)}<option value="__custom__">+ Type your own...</option></select></div>:options&&custom?<div style={{display:"flex",gap:6}}><input type="text" value={value} onChange={e=>onChange(e.target.value)} placeholder="Type your own..." style={{...base,flex:1}} autoFocus/><button onClick={()=>setCustom(false)} style={{background:C.surfaceHover,border:"1px solid "+C.border,borderRadius:8,color:C.textMuted,padding:"0 12px",cursor:"pointer",fontSize:12}}>List</button></div>:type==="textarea"?<textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={3} style={{...base,resize:"vertical"}}/>:type==="date"?<input type="date" value={value} onChange={e=>onChange(e.target.value)} onClick={e=>{try{e.target.showPicker()}catch(x){}}} style={dateStyle}/>:<input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={base}/>}</div>);
     };
     const Card=({children,style={}})=>(<div style={{background:C.card,border:"1px solid "+C.border,borderRadius:14,padding:20,...style}}>{children}</div>);
     const Modal=({open,onClose,title,children,width=480})=>{
@@ -447,12 +450,13 @@
     // ─── INCOME PAGE ────────────────────────────────────────────
     const IncomePage=({data,userId,reload,cur,L})=>{
       const [modal,setModal]=useState(false);
-      const [form,setForm]=useState({date:todayStr(),source:"",amount:"",method:"",notes:""});
+      const [form,setForm]=useState({date:todayStr(),source:"",customSrc:"",amount:"",method:"",notes:""});
       const [saving,setSaving]=useState(false);
       const add=async()=>{
-        if(!form.source||!form.amount) return;
+        const src=form.source==="Custom"?form.customSrc:form.source;
+        if(!src||!form.amount) return;
         setSaving(true);
-        try{await db.insert('incomes',{user_id:userId,date:form.date,source:form.source,amount:Number(form.amount),method:form.method,notes:form.notes});await reload();setModal(false);setForm({date:todayStr(),source:"",amount:"",method:"",notes:""});}catch(e){alert(e.message);}
+        try{await db.insert('incomes',{user_id:userId,date:form.date,source:src,amount:Number(form.amount),method:form.method,notes:form.notes});await reload();setModal(false);setForm({date:todayStr(),source:"",customSrc:"",amount:"",method:"",notes:""});}catch(e){alert(e.message);}
         setSaving(false);
       };
       const del=async(id)=>{try{await db.delete('incomes',id);await reload();}catch(e){alert(e.message);}};
@@ -468,7 +472,8 @@
         )}
         <Modal open={modal} onClose={()=>setModal(false)} title={L('addIncome')}>
           <Input label={L('date')} type="date" value={form.date} onChange={v=>setForm({...form,date:v})}/>
-          <Input label={L('incomeSource')} value={form.source} onChange={v=>setForm({...form,source:v})} options={INCOME_SRC}/>
+          <Input label={L('incomeSource')} value={form.source} onChange={v=>setForm({...form,source:v})} options={[...INCOME_SRC,"Custom"]}/>
+          {form.source==="Custom"&&<Input label="Type your source" value={form.customSrc} onChange={v=>setForm({...form,customSrc:v})} placeholder="e.g. Rental income"/>}
           <Input label={L('amount')} type="number" value={form.amount} onChange={v=>setForm({...form,amount:v})} placeholder="0"/>
           <Input label={L('paymentMethod')} value={form.method} onChange={v=>setForm({...form,method:v})} options={PAY_METHODS}/>
           <Input label={L('notes')} value={form.notes} onChange={v=>setForm({...form,notes:v})} type="textarea" placeholder={L('optional')}/>
@@ -480,12 +485,13 @@
     // ─── EXPENSE PAGE ───────────────────────────────────────────
     const ExpensePage=({data,userId,reload,cur,L})=>{
       const [modal,setModal]=useState(false);
-      const [form,setForm]=useState({date:todayStr(),category:"",description:"",amount:"",method:"",notes:""});
+      const [form,setForm]=useState({date:todayStr(),category:"",customCat:"",description:"",amount:"",method:"",notes:""});
       const [saving,setSaving]=useState(false);
       const add=async()=>{
-        if(!form.category||!form.amount) return;
+        const cat=form.category==="Custom"?form.customCat:form.category;
+        if(!cat||!form.amount) return;
         setSaving(true);
-        try{await db.insert('expenses',{user_id:userId,date:form.date,category:form.category,description:form.description,amount:Number(form.amount),method:form.method,notes:form.notes});await reload();setModal(false);setForm({date:todayStr(),category:"",description:"",amount:"",method:"",notes:""});}catch(e){alert(e.message);}
+        try{await db.insert('expenses',{user_id:userId,date:form.date,category:cat,description:form.description,amount:Number(form.amount),method:form.method,notes:form.notes});await reload();setModal(false);setForm({date:todayStr(),category:"",customCat:"",description:"",amount:"",method:"",notes:""});}catch(e){alert(e.message);}
         setSaving(false);
       };
       const del=async(id)=>{try{await db.delete('expenses',id);await reload();}catch(e){alert(e.message);}};
@@ -497,11 +503,12 @@
           <Btn onClick={()=>setModal(true)}><span style={{display:"flex",alignItems:"center",gap:6}}><Icon name="plus" size={16} color="#0B0E11"/> {L('addExpense')}</span></Btn>
         </div>
         {sorted.length===0?<EmptyState icon="expense" message={L('noExpensesYet')} action={L('addExpense')} onAction={()=>setModal(true)}/>:(
-          <Card style={{padding:0,overflow:"hidden"}}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr style={{color:C.textDim,textAlign:"left",background:C.cardAlt}}>{["Date","Category","Description","Method","Amount",""].map(h=><th key={h} style={{padding:"10px 14px",fontWeight:500,textAlign:h==="Amount"?"right":"left"}}>{h}</th>)}</tr></thead><tbody>{sorted.map(e=><tr key={e.id} style={{borderTop:"1px solid "+C.border}}><td style={{padding:"10px 14px",color:C.textMuted}}>{e.date?fmtDate(e.date):""}</td><td style={{padding:"10px 14px",color:C.text,fontWeight:500}}>{e.category}</td><td style={{padding:"10px 14px",color:C.textMuted}}>{e.description}</td><td style={{padding:"10px 14px",color:C.textMuted}}>{e.method}</td><td style={{padding:"10px 14px",textAlign:"right",fontFamily:"'Space Mono',monospace",color:C.warn,fontWeight:600}}>-{cur} {fmt(e.amount)}</td><td style={{padding:"10px 14px"}}><button onClick={()=>del(e.id)} style={{background:"none",border:"none",cursor:"pointer",opacity:0.5}}><Icon name="trash" size={16} color={C.warn}/></button></td></tr>)}</tbody></table></div></Card>
+          <Card style={{padding:0,overflow:"hidden"}}><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}><thead><tr style={{color:C.textDim,textAlign:"left",background:C.cardAlt}}>{[L('date'),L('category'),L('description'),L('method'),L('amount'),""].map(h=><th key={h} style={{padding:"10px 14px",fontWeight:500,textAlign:h===L('amount')?"right":"left"}}>{h}</th>)}</tr></thead><tbody>{sorted.map(e=><tr key={e.id} style={{borderTop:"1px solid "+C.border}}><td style={{padding:"10px 14px",color:C.textMuted}}>{e.date?fmtDate(e.date):""}</td><td style={{padding:"10px 14px",color:C.text,fontWeight:500}}>{e.category}</td><td style={{padding:"10px 14px",color:C.textMuted}}>{e.description}</td><td style={{padding:"10px 14px",color:C.textMuted}}>{e.method}</td><td style={{padding:"10px 14px",textAlign:"right",fontFamily:"'Space Mono',monospace",color:C.warn,fontWeight:600}}>-{cur} {fmt(e.amount)}</td><td style={{padding:"10px 14px"}}><button onClick={()=>del(e.id)} style={{background:"none",border:"none",cursor:"pointer",opacity:0.5}}><Icon name="trash" size={16} color={C.warn}/></button></td></tr>)}</tbody></table></div></Card>
         )}
         <Modal open={modal} onClose={()=>setModal(false)} title={L('addExpense')}>
           <Input label={L('date')} type="date" value={form.date} onChange={v=>setForm({...form,date:v})}/>
-          <Input label={L('category')} value={form.category} onChange={v=>setForm({...form,category:v})} options={EXPENSE_CATS}/>
+          <Input label={L('category')} value={form.category} onChange={v=>setForm({...form,category:v})} options={[...EXPENSE_CATS,"Custom"]}/>
+          {form.category==="Custom"&&<Input label="Type your category" value={form.customCat} onChange={v=>setForm({...form,customCat:v})} placeholder="e.g. Gym membership"/>}
           <Input label={L('description')} value={form.description} onChange={v=>setForm({...form,description:v})} placeholder={L('whatSpend')}/>
           <Input label={L('amount')} type="number" value={form.amount} onChange={v=>setForm({...form,amount:v})} placeholder="0"/>
           <Input label={L('paymentMethod')} value={form.method} onChange={v=>setForm({...form,method:v})} options={PAY_METHODS}/>
@@ -642,8 +649,8 @@
           <Input label="Name / Description" value={form.name} onChange={v=>setForm({...form,name:v})} placeholder="e.g. Safaricom Shares"/>
           <Input label="Amount Invested" type="number" value={form.amount} onChange={v=>setForm({...form,amount:v})} placeholder="0"/>
           <Input label="Date" type="date" value={form.date} onChange={v=>setForm({...form,date:v})}/>
-          <Input label="Expected Return" type="number" value={form.expected_return} onChange={v=>setForm({...form,expected_return:v})} placeholder="0"/>
-          <Input label="Current Value" type="number" value={form.current_value} onChange={v=>setForm({...form,current_value:v})} placeholder="Same as invested"/>
+          <Input label={L('expectedReturn')} type="number" value={form.expected_return} onChange={v=>setForm({...form,expected_return:v})} placeholder="0"/>
+          <Input label={L('currentValue')} type="number" value={form.current_value} onChange={v=>setForm({...form,current_value:v})} placeholder="Same as invested"/>
           <Input label="Notes" value={form.notes} onChange={v=>setForm({...form,notes:v})} type="textarea" placeholder="Optional..."/>
           <Btn onClick={add} disabled={saving} style={{width:"100%"}}>{saving?"Saving...":"Save Investment"}</Btn>
         </Modal>
