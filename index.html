@@ -181,6 +181,16 @@
       account:{en:'Account',sw:'Akaunti',fr:'Compte'},
       logOut:{en:'Log Out',sw:'Ondoka',fr:'Déconnexion'},
       language:{en:'Language',sw:'Lugha',fr:'Langue'},
+      feedback:{en:'Feedback',sw:'Maoni',fr:'Commentaires'},
+      feedbackTitle:{en:'Share Your Feedback',sw:'Toa Maoni Yako',fr:'Partagez Vos Commentaires'},
+      feedbackDesc:{en:'Help us improve Fedha! Tell us what you like, what could be better, or suggest new features.',sw:'Tusaidie kuboresha Fedha! Tuambie unachopenda, kinachoweza kuboreshwa, au pendekeza vipengele vipya.',fr:'Aidez-nous à améliorer Fedha! Dites-nous ce que vous aimez, ce qui pourrait être amélioré, ou suggérez de nouvelles fonctionnalités.'},
+      feedbackRate:{en:'How would you rate Fedha?',sw:'Unaipatia Fedha alama gani?',fr:'Comment évaluez-vous Fedha?'},
+      feedbackWhat:{en:'What do you like most?',sw:'Unapenda nini zaidi?',fr:'Qu\'aimez-vous le plus?'},
+      feedbackImprove:{en:'What could be improved?',sw:'Nini kinaweza kuboreshwa?',fr:'Que pourrait-on améliorer?'},
+      feedbackSuggest:{en:'Any feature suggestions?',sw:'Una mapendekezo ya vipengele?',fr:'Des suggestions de fonctionnalités?'},
+      sendFeedback:{en:'Send Feedback',sw:'Tuma Maoni',fr:'Envoyer'},
+      feedbackSent:{en:'Thank you! Your feedback has been sent.',sw:'Asante! Maoni yako yametumwa.',fr:'Merci! Vos commentaires ont été envoyés.'},
+      sending:{en:'Sending...',sw:'Inatuma...',fr:'Envoi...'},
       // General
       personalFinance:{en:'Personal Finance System',sw:'Mfumo wa Fedha Binafsi',fr:'Système de Finances Personnelles'},
       optional:{en:'Optional notes...',sw:'Maelezo ya ziada...',fr:'Notes optionnelles...'},
@@ -773,6 +783,56 @@
       </div>);
     };
 
+    // ─── FEEDBACK PAGE ────────────────────────────────────────
+    const FeedbackPage=({userId,profile,L})=>{
+      const [rating,setRating]=useState(0);
+      const [like,setLike]=useState("");
+      const [improve,setImprove]=useState("");
+      const [suggest,setSuggest]=useState("");
+      const [sending,setSending]=useState(false);
+      const [sent,setSent]=useState(false);
+
+      const submit=async()=>{
+        if(!rating&&!like&&!improve&&!suggest) return;
+        setSending(true);
+        try{
+          await db.insert('feedback',{user_id:userId,rating,likes:like,improvements:improve,suggestions:suggest,user_name:profile.name||"",user_email:profile.email||""});
+          setSent(true);
+        }catch(e){
+          // If table doesn't exist, send via WhatsApp instead
+          const msg=encodeURIComponent("FEDHA FEEDBACK\n\nFrom: "+(profile.name||"")+" ("+(profile.email||"")+")\nRating: "+rating+"/5\nLikes: "+like+"\nImprove: "+improve+"\nSuggestions: "+suggest);
+          window.open("https://wa.me/255765729647?text="+msg,"_blank");
+          setSent(true);
+        }
+        setSending(false);
+      };
+
+      if(sent) return(<div style={{textAlign:"center",padding:"60px 20px"}}>
+        <div style={{fontSize:48,marginBottom:16}}>🎉</div>
+        <h2 style={{margin:0,fontSize:22,color:C.text,marginBottom:12}}>{L('feedbackSent')}</h2>
+        <Btn onClick={()=>{setSent(false);setRating(0);setLike("");setImprove("");setSuggest("");}} variant="small">Send another</Btn>
+      </div>);
+
+      return(<div>
+        <h2 style={{margin:0,fontSize:22,color:C.text,marginBottom:8}}>{L('feedbackTitle')}</h2>
+        <p style={{fontSize:14,color:C.textMuted,marginBottom:24,lineHeight:1.7}}>{L('feedbackDesc')}</p>
+        <div style={{maxWidth:500}}>
+          <Card style={{marginBottom:20}}>
+            <div style={{fontSize:14,fontWeight:600,color:C.text,marginBottom:12}}>{L('feedbackRate')}</div>
+            <div style={{display:"flex",gap:8}}>
+              {[1,2,3,4,5].map(n=><button key={n} onClick={()=>setRating(n)} style={{width:44,height:44,borderRadius:10,border:"1px solid "+(rating>=n?"#FFB347":"#252D3D"),background:rating>=n?"rgba(255,179,71,0.15)":"transparent",fontSize:20,cursor:"pointer",transition:"all 0.2s"}}>{rating>=n?"⭐":"☆"}</button>)}
+            </div>
+          </Card>
+          <Card style={{marginBottom:20}}>
+            <Input label={L('feedbackWhat')} value={like} onChange={setLike} type="textarea" placeholder={L('optional')}/>
+            <Input label={L('feedbackImprove')} value={improve} onChange={setImprove} type="textarea" placeholder={L('optional')}/>
+            <Input label={L('feedbackSuggest')} value={suggest} onChange={setSuggest} type="textarea" placeholder={L('optional')}/>
+          </Card>
+          <Btn onClick={submit} disabled={sending} style={{width:"100%"}}>{sending?L('sending'):L('sendFeedback')}</Btn>
+        </div>
+      </div>);
+    };
+
     // ─── PROFILE PAGE ───────────────────────────────────────────
     const ProfilePage=({profile,userId,reload,onLogout,L})=>{
       const [form,setForm]=useState({name:profile.name||"",email:profile.email||"",currency:profile.currency||"TZS"});
@@ -812,6 +872,7 @@
       {id:"investments",tkey:"investments",icon:"invest"},
       {id:"loans",tkey:"loans",icon:"loans"},
       {id:"reports",tkey:"reports",icon:"reports"},
+      {id:"feedback",tkey:"feedback",icon:"edit"},
       {id:"profile",tkey:"profile",icon:"profile"},
     ];
 
@@ -896,6 +957,7 @@
           case "investments": return <InvestmentPage data={data} userId={user.id} reload={reload} cur={cur} L={L}/>;
           case "loans": return <LoansPage data={data} userId={user.id} reload={reload} cur={cur} L={L}/>;
           case "reports": return <ReportsPage data={data} cur={cur} L={L}/>;
+          case "feedback": return <FeedbackPage userId={user.id} profile={profile} L={L}/>;
           case "profile": return <ProfilePage profile={profile} userId={user.id} reload={reload} onLogout={()=>{setUser(null);setProfile(null);}} L={L}/>;
           default: return <DashboardPage data={data} profile={profile} cur={cur} L={L}/>;
         }
